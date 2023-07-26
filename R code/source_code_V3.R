@@ -10,10 +10,7 @@ library(mgcv)
 
 
 ##Load Data
-
-wwd <- getwd()
-ldf <- readRDS("C:\\Users\\Tom\\Desktop\\ISAR_Extrap\\Data\\Datasets.rds")
-setwd(wwd)
+ldf <- readRDS("Data\\Datasets.rds")
 
 if (any(sapply(ldf, nrow) < 8)) stop("ewsrdgfserg")
 
@@ -110,7 +107,8 @@ extrap <- function(d, th = 0.5, CI = FALSE, n = 100, NT = "shapiro", All = FALSE
                                               normaTest = NT, verb = FALSE, 
                                               homoTest = "cor.fitted", 
                                               homoCor = "pearson",
-                                              grid_start = grid_start)), error = function(e) NA)
+                                              grid_start = grid_start,...)), 
+                error = function(e) NA)
   
 
   #return all NAs if sm fails
@@ -164,9 +162,12 @@ extrap <- function(d, th = 0.5, CI = FALSE, n = 100, NT = "shapiro", All = FALSE
       # dum2 <- tryCatch(suppressMessages(sar_average(data = dDF, obj = x3S, crit = "AICc", normaTest = "none",
       #         homoTest = "none",
       #      verb = FALSE, ...)), error = function(e) NA)
-      dum2 <- tryCatch(suppressMessages(sar_average(data = dDF, obj = x3S, crit = "AICc", normaTest = "none",
+      dum2 <- tryCatch(suppressMessages(sar_average(data = dDF, obj = x3S, crit = "AICc", 
+                                                    normaTest = "none",
                                                     homoTest = "none",
-                                                    verb = FALSE, neg_check = TRUE)), error = function(e) NA)
+                                                    verb = FALSE, neg_check = TRUE,
+                                                    grid_start = grid_start)), 
+                       error = function(e) NA)
       
       
       if (length(dum2) == 1 || length(dum2$details$mod_names) != length(x3S)) next

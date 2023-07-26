@@ -2,7 +2,7 @@
 #######RUN CODE###################
 ###################################################
 
-source("C:\\Users\\Tom\\Desktop\\ISAR_Extrap\\R code\\source_code_V3.R")
+source("R code\\source_code_V3.R")
 
 ############################################################
 ############Run main extrapolation function#################
@@ -12,7 +12,7 @@ source("C:\\Users\\Tom\\Desktop\\ISAR_Extrap\\R code\\source_code_V3.R")
 #x6 = c("power", "powerR","epm1","epm2","p1","p2","loga","koba","mmf","monod","negexpo","chapman",
  #       "weibull3","asymp","ratio","gompertz","weibull4","betap","heleg")
 
-cores = 11
+cores = 10
 cl = makeCluster(cores); on.exit(stopCluster(cl))
 registerDoParallel(cl)
 i = 1 #Dummy line for RStudio warnings
@@ -105,16 +105,6 @@ quantile(abs(resM$Lee_Mult), probs = c(0.025, 0.975))
 length(which(resM$Lee_Pow > 0)) / 119
 length(which(resM$Lee_Mult > 0)) / 119
 
-#area
-max(predMat$Amax)
-#Get median area across all islands#
-ma <- c()
-ma <- sapply(ldf, function(x){
-  c(ma, x$a)
-})
-
-median(unlist(ma))
-
 ###################################################
 ####RUN AGAIN BUT WITH CONFIDENCE INTERVALS########
 #####################################################
@@ -122,11 +112,16 @@ median(unlist(ma))
 resM_CI = foreach(i=seq(from=1, to=length(ldf), by=1))  %dopar% {
   library(dplyr)
   library(sars)
-  extrap(d = ldf[[i]], th = 0.5, NT = "shapiro",
-         CI = TRUE, n = 100, neg_check = TRUE)
+ caro <- extrap(d = ldf[[i]], th = 0.5, NT = "shapiro",
+         CI = TRUE, n = 100, neg_check = TRUE,
+         grid_start = "partial")
   pp = paste0(i, ".csv")
   write.csv(4, file = pp)
+  caro
 }
+
+#save(resM_CI, file = "resM_CI.R")
+#load(file.choose())
 
 resMCI <-  t(matrix(nrow = 14, unlist(resM_CI))) #parallel returns a list; so turn into a df
 resMCI <- as.data.frame(resMCI)
@@ -134,7 +129,11 @@ resMCI <- as.data.frame(resMCI)
 colnames(resMCI) <- c("Obs", "Pow", "Multi", "Power_weight", "rows", "Lee_Pow", "Lee_Mult","Best_mod",
                     "Best", "LEE_Best", "CIP[1]", "CIP[2]", "CIM[1]", "CIM[2]")
 
-#save(resM_CI, file = "resM_CI.R")
+if (any(is.na(resMCI[,8]))){
+  whna2 <- which(is.na(resMCI[, 8]))
+  resMCI <- resMCI[-whna2, ]
+  cat(length(whna2))
+}
 
 #need to convert certain cols to numeric (as are factors)
 resMCI[ ,c(1:7, 9:14)] <- apply(resMCI[ ,c(1:7, 9:14)], 2, 
@@ -144,9 +143,9 @@ resMCI[ ,11:14] <- apply(resMCI[ ,11:14], 2, round, digits = 2)
 write.csv(resMCI, file = "resM_0.5_CIsC.csv")
 
 #calculate median CI width
-pCr <- resMCI$CIP.2. - resMCI$CIP.1.
+pCr <- resMCI$'CIP[2]' - resMCI$'CIP[1]'
 median(pCr)
-mCr <- resMCI$CIM.2. - resMCI$CIM.1.
+mCr <- resMCI$'CIM[2]' - resMCI$'CIM[1]'
 median(mCr)
 
 ############################################
@@ -308,7 +307,7 @@ wcs(round(meanA, 2))
 ##GAM analyses
 ############################################################
 
-#I've checked and the filename orders in ldf and pm2 all match up
+#filename orders in ldf and pm2 all match up
 
 #get predictors
 predMat <- matrix(nrow = length(ldf), ncol = 7)
@@ -319,7 +318,7 @@ predMat <- as.data.frame(predMat)
 colnames(predMat) <- c("Amin", "Amax", "Ascale", "Smin", "Smax", "Sscale", "Noisl")
 
 #join with lat, taxa data
-pm2 <- read.csv("C:\\Users\\Tom\\Desktop\\ISAR_Extrap\\Data\\preds.csv")[,2:3]
+pm2 <- read.csv("Data\\preds.csv")[,2:3]
 colnames(pm2) <- c("Lat", "Taxon")
 predMat <- cbind(predMat, pm2)
 #remove from predMat the dataset(s) that were removed from resM
@@ -327,9 +326,6 @@ predMat <- predMat[-whna,]
 
 #all preds need log-transforming
 predMat[ ,1:7] <- apply(predMat[ ,1:7], 2, log)
-
-#standardise (don't think needed for gams)
-#predMat[ ,1:8] <- apply(predMat[ ,1:8], 2, scale)
 
 regMat <- cbind(resM, predMat)
 
@@ -364,7 +360,7 @@ plot(r, fitted(g2))
 #saveRDS(list(g,g2), file = "gam_results.rds")
 
 ##Make plot for paper
-#I've checked and the select = 1,2,3,4 matches up with the xlab and titles
+#the select = 1,2,3,4 matches up with the xlab and titles
 #get intercept to shift plot
 int <- g2$coefficients[1]
 
