@@ -253,7 +253,7 @@ to predict the richness of an island of size 80 (grey dotted line)
 
 #### Figure 2
 
-!["image"](Results\\GAM_fig.jpeg)
+!["image"](README_files\\GAM_fig.jpeg)
 FIGURE 2 Fitted smoothers from a generalized additive model showing the partial effects of Ascale, Latitude, Smin and Sscale on
 the LEE‐POW values. The fitted values have been shifted in each plot by adding the model intercept (0.04) value (using the shift argument
 in the plot.gam R function). The effective degrees of freedom for each smoother are: Ascale (1.00), Latitude (1.00), Smin (2.90) and Sscale (1.00).
