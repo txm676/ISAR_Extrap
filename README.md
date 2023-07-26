@@ -229,8 +229,7 @@ an island of size 80 (grey dotted line)
 
 #### Figure 2
 
-![](Results\GAM_fig.jpeg)<!-- -->
-FIGURE 2 Fitted smoothers from a
+![“image”](Results\GAM_fig.jpeg) FIGURE 2 Fitted smoothers from a
 generalized additive model showing the partial effects of Ascale,
 Latitude, Smin and Sscale on the LEE‐POW values. The fitted values have
 been shifted in each plot by adding the model intercept (0.04) value
