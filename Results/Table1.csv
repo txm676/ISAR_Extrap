@@ -1,0 +1,21 @@
+Model,No. parameters,Mean weight,Best fit,Best prediction
+Asymptotic,3,0.04,1,4
+Beta-P,4,0,0,5
+Chapman_Richards,3,0.03,0,2
+Logarithmic,2,0.14,17,6
+Extended Power 1,3,0.03,0,5
+Extended Power 2,3,0.03,1,8
+Gompertz,3,0.04,0,3
+Kobayashi ,2,0.15,12,5
+Linear,2,0.13,21,7
+Logistic,3,0.05,5,6
+Monod,2,0.11,15,6
+Heleg,3,0.03,0,4
+Negative Exponential,2,0.1,17,12
+Persistence Function 1,3,0.04,3,2
+Persistence Function 2,3,0.03,1,4
+Power,2,0.16,24,10
+Power Rosenzweig,3,0.03,1,7
+Rational,3,0.03,1,7
+Weibull-3,3,0.03,0,4
+Weibull-4,4,0.01,0,3
