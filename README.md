@@ -1,7 +1,7 @@
 README
 ================
 Tom Matthews
-2023-07-31
+2023-08-04
 
 ## Preamble
 
@@ -20,7 +20,7 @@ published updated / more extensive versions of the datasets used; in
 these cases, we have replaced the original version. As such, the
 datasets presented here differ slightly from those used in the original
 publication. In addition, since the paper was published in 2019, there
-have been numerous updated made to the ‘sars’ R package, including
+have been numerous updates made to the ‘sars’ R package, including
 replacing models, bug fixes and improving the fitting algorithms. As
 such, the results presented here may differ slightly from those
 published in the original paper, although the main conclusions are
