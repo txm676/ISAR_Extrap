@@ -246,14 +246,20 @@ modReg <- function(d1, d2, type = "gam"){#d2 = LEE, d1 weight, type = either lm 
   if (any(is.nan(d2))){ #if any Nan in the LEE values (see above) turn to NA 
     wn <- which(is.nan(d2))
     d2[wn] <- NA
-    d1[wn] <- NA
+    d1[wn] <- NA    
   }
+  wn2 <- which(is.na(d1))
+  wn3 <- which(is.na(d2))
+  if (!identical(wn3,wn2)) stop("Exit")
   d11 <- na.omit(d1)
   d22 <- na.omit(d2)
   if (any(d22 == "-Inf")){ #if any -Inf in the LEE values (see above) turn to NA and remove
     wi <- which(d22 == "-Inf")
     d22[wi] <- NA
     d11[wi] <- NA
+    wn4 <- which(is.na(d11))
+    wn5 <- which(is.na(d22))
+    if (!identical(wn4,wn5)) stop("Exit")
     d11 <- na.omit(d11)
     d22 <- na.omit(d22)
   }
@@ -285,7 +291,8 @@ out <- matrix(nrow = 20, ncol = 3)
 k <- 21 #start for the LEE values
 
 for (i in 1:20){
-  m <- modReg(d1 = resA2[ ,i], d2 = resA2[ ,k], type = "gam")
+  m <- modReg(d1 = resA2[ ,i], d2 = resA2[ ,k], 
+              type = "gam")
   out[i, ] <- m[[2]]
   k <- k + 1
 }
@@ -298,6 +305,11 @@ rownames(out2) <- nn
 write.csv(round(out2, 2), file ="out2_gamC.csv")
 
 #P value corrected: 0.05 / 20 = 0.0025
+
+#Note, you get very similar results fitting the GAMS
+#using REML; only difference is that the logistic model
+#is no longer a significant fit. also very similar if you
+#use raw LEE values as the response rather than abs()
 
 #get mean AICc weight for each model
 meanA <- apply(resA2[, 1:20], 2, function(x) mean(x,na.rm  = TRUE))
@@ -329,33 +341,62 @@ predMat[ ,1:7] <- apply(predMat[ ,1:7], 2, log)
 
 regMat <- cbind(resM, predMat)
 
-#check vifs 
-tes <- lm(Lee_Pow ~ Amin + Ascale + Smin  + Sscale + Noisl + Lat + Taxon, data = regMat)
+#Fit LM, check vifs.
+#Use gam to fit, so that same functions used for both
+tes <- gam(Lee_Pow ~ Amin + Ascale + Smin  + Sscale +
+            Noisl + Lat + Taxon, data = regMat)
 car::vif(tes)
 summary(tes)
 #cant have Amax/Smax and the scale equivalents, so have removed the max
 
 #check distribution of preds
-pm2 <- select(predMat, c(Amin , Ascale , Smin  , Sscale , Noisl , Lat))
+pm2 <- select(predMat, c(Amin, Ascale, Smin,
+                         Sscale, Noisl, Lat))
 apply(pm2, 2, hist)
 
-#Using GAMs
-g <- gam(Lee_Pow ~ s(Amin) + s(Ascale) + s(Smin)  + s(Sscale) + s(Noisl) + s(Lat) + 
+##Using GAMs
+#Note - we used the default setting, which fits using
+#the default GCV.Cp method. However, many people recommend
+#the use of REML instead. Fitting using REML instead 
+#results in a very similar full model.
+g <- gam(Lee_Pow ~ s(Amin) + s(Ascale) + s(Smin) +
+           s(Sscale) + s(Noisl) + s(Lat) + 
            Taxon, data = regMat)
 
+# gAlt <- gam(Lee_Pow ~ s(Amin) + s(Ascale) + s(Smin) +
+#            s(Sscale) + s(Noisl) + s(Lat) + 
+#            Taxon, data = regMat, method = "REML")
+
+##Compare the lm with the GAM (using default GAM fitting method),
+#using AIC, following Zuur (2013 - beginner's guide to 
+#GAMS with R), p.137
 AIC(g); AIC(tes)
 
+#Model selection using dredge, and comparing alternative
+#GAM model structures (all with default fitting method) using 
+#AICc following Zuur (2013), p. 109
 options(na.action = "na.fail")
 dd <- MuMIn::dredge(g)
 filter(dd, delta <=2)
 MuMIn::sw(dd)
 
-g2 <- gam(Lee_Pow ~ s(Ascale)  + s(Lat) + s(Smin)  + s(Sscale), data = regMat)
+#Taking the four variables present in the models with
+#delta AICc < 2
+g2 <- gam(Lee_Pow ~ s(Ascale) + s(Lat) +
+            s(Smin) + s(Sscale), data = regMat)
 summary(g2)
 
+#Again, very similar when fitted using REML
+# g2Alt <- gam(Lee_Pow ~ s(Ascale) + s(Lat) +
+#             s(Smin)  + s(Sscale), data = regMat,
+#           method = "REML")
+# summary(g2Alt)
+
+#check model residuals
 r <- g2$residuals
 hist(r)
 plot(r, fitted(g2))
+gam.check(g2)
 
 #saveRDS(list(g,g2), file = "gam_results.rds")
 
@@ -378,6 +419,84 @@ plot(g2, select = 4, main = expression(italic('S')['scale']), cex.main = 1.8, ce
      xlab = expression(italic('S')['scale']), shift = int, ylab = "LEE-POW (partial effect)")
 dev.off()
 
+#Note - in certain places, e.g.,
+#https://stats.stackexchange.com/questions/471267/plotting-gams-on-response-scale-with-multiple-smooth-and-linear-terms
+#it appears that a better approach to plotting 
+#the individual GAM smoother terms than shifting
+#by the intercept, when there are multiple smoother terms in
+#the model, is to use the model to predict values and plot those.
+#In this case, it makes near identical plots.
+# new_data1 <- with(regMat, expand.grid(Ascale = seq(min(Ascale),
+#                                                  max(Ascale),
+#                                              length = 200),
+#                                      Lat = median(Lat),
+#                                      Smin = median(Smin),
+#                                      Sscale = median(Sscale)))
+# pred1 <- predict(g2, new_data1, se.fit = TRUE)
+# pred1 <- cbind(pred1, new_data1)
+# pred1$LI <- pred1$fit - (2*pred1$se.fit)
+# pred1$UI <- pred1$fit + (2*pred1$se.fit)
+# 
+# new_data2 <- with(regMat, expand.grid(Lat = seq(min(Lat),
+#                                                    max(Lat),
+#                                                    length = 200),
+#                                       Ascale = median(Ascale),
+#                                       Smin = median(Smin),
+#                                       Sscale = median(Sscale)))
+# pred2 <- predict(g2, new_data2, se.fit = TRUE)
+# pred2 <- cbind(pred2, new_data2)
+# pred2$LI <- pred2$fit - (2*pred2$se.fit)
+# pred2$UI <- pred2$fit + (2*pred2$se.fit)
+# 
+# new_data3 <- with(regMat, expand.grid(Smin = seq(min(Smin),
+#                                                 max(Smin),
+#                                                 length = 200),
+#                                       Ascale = median(Ascale),
+#                                       Lat = median(Lat),
+#                                       Sscale = median(Sscale)))
+# pred3 <- predict(g2, new_data3, se.fit = TRUE)
+# pred3 <- cbind(pred3, new_data3)
+# pred3$LI <- pred3$fit - (2*pred3$se.fit)
+# pred3$UI <- pred3$fit + (2*pred3$se.fit)
+# 
+# new_data4 <- with(regMat, expand.grid(Sscale = seq(min(Sscale),
+#                                                 max(Sscale),
+#                                                 length = 200),
+#                                       Ascale = median(Ascale),
+#                                       Smin = median(Smin),
+#                                       Lat = median(Lat)))
+# pred4 <- predict(g2, new_data4, se.fit = TRUE)
+# pred4 <- cbind(pred4, new_data4)
+# pred4$LI <- pred4$fit - (2*pred4$se.fit)
+# pred4$UI <- pred4$fit + (2*pred4$se.fit)
+# 
+# jpeg(file = "GAM_fig_Alt.jpeg", width = 25, height = 25, res = 600, units = "cm")
+# par(mfrow = c(2,2))
+# plot(pred1$Ascale, pred1$fit, ylab = "LEE-POW (partial effect)",
+#      type = "l", ylim = c(-0.2, 0.3), yaxt = "n")
+# axis(2, at = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3),
+#      labels = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3))
+# lines(pred1$Ascale, pred1$LI, lty = 3)
+# lines(pred1$Ascale, pred1$UI, lty = 3)
+# plot(pred2$Lat, pred2$fit, ylab = "LEE-POW (partial effect)",
+#      type = "l", ylim = c(-0.2, 0.3), yaxt = "n")
+# axis(2, at = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3),
+#      labels = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3))
+# lines(pred2$Lat, pred2$LI, lty = 3)
+# lines(pred2$Lat, pred2$UI, lty = 3)
+# plot(pred3$Smin, pred3$fit, ylab = "LEE-POW (partial effect)",
+#      type = "l", ylim = c(-0.2, 0.3), yaxt = "n")
+# axis(2, at = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3),
+#      labels = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3))
+# lines(pred3$Smin, pred3$LI, lty = 3)
+# lines(pred3$Smin, pred3$UI, lty = 3)
+# plot(pred4$Sscale, pred4$fit, ylab = "LEE-POW (partial effect)",
+#      type = "l", ylim = c(-0.2, 0.3), yaxt = "n")
+# axis(2, at = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3),
+#      labels = c(-0.2, -0.1, 0, 0.1, 0.2, 0.3))
+# lines(pred4$Sscale, pred4$LI, lty = 3)
+# lines(pred4$Sscale, pred4$UI, lty = 3)
+# dev.off()
 ##########################################################
 #check which datasets the power model passes checks##########
 ##############################################################

@@ -1,7 +1,7 @@
 README
 ================
 Tom Matthews
-2023-07-26
+2023-07-31
 
 ## Preamble
 
@@ -179,7 +179,9 @@ model across all fits to the filtered datasets (excluding
 non‐satisfactory fits). Best fit corresponds the number of times a model
 provided the best fit to a filtered dataset. Best prediction corresponds
 to the number of times a model provided the best extrapolated prediction
-in the all model comparison.
+in the all model comparison; these values do not sum to 120 (the number
+of datasets) as the multi‐model averaged curve provided the best
+extrapolation prediction in several cases.
 
 | Model                  | No..parameters | Mean.weight | Best.fit | Best.prediction |
 |:-----------------------|---------------:|------------:|---------:|----------------:|
